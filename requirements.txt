@@ -1,0 +1,18 @@
+﻿# ===== Core =====
+Django==5.2.5
+djangorestframework>=3.15,<4
+drf-spectacular>=0.27,<1
+djangorestframework-simplejwt>=5.3,<6
+django-filter>=24.2,<25
+python-dotenv>=1.0,<2
+
+# ===== PostgreSQL driver (psycopg v3 con binarios precompilados) =====
+psycopg[binary]>=3.1,<4
+
+# ===== Utilidades =====
+Pillow>=10,<11
+openpyxl>=3.1,<4
+django-simple-history>=3.7,<4
+
+# ===== Zona horaria para Windows (base de datos tz) =====
+tzdata>=2024.1,<2026
