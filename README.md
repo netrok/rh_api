@@ -374,3 +374,5 @@ powershell
 Copiar código
 pip freeze > requirements.txt
  No subas secretos. Usa .env, .env.prod y vaults en tus pipelines.)
+#   r h _ a p i  
+ 
