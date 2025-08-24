@@ -5,31 +5,42 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('catalogos', '0001_initial'),
-        ('empleados', '0001_initial'),
+        ("catalogos", "0001_initial"),
+        ("empleados", "0001_initial"),
     ]
 
     operations = [
         migrations.RenameIndex(
-            model_name='empleado',
-            new_name='empleados_departa_95a8c1_idx',
-            old_name='empleados_departa_1b5399_idx',
+            model_name="empleado",
+            new_name="empleados_departa_95a8c1_idx",
+            old_name="empleados_departa_1b5399_idx",
         ),
         migrations.RenameIndex(
-            model_name='empleado',
-            new_name='empleados_puesto__5e14c0_idx',
-            old_name='empleados_puesto_db5e19_idx',
+            model_name="empleado",
+            new_name="empleados_puesto__5e14c0_idx",
+            old_name="empleados_puesto_db5e19_idx",
         ),
         migrations.AlterField(
-            model_name='empleado',
-            name='departamento',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='empleados', to='catalogos.departamento'),
+            model_name="empleado",
+            name="departamento",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="empleados",
+                to="catalogos.departamento",
+            ),
         ),
         migrations.AlterField(
-            model_name='empleado',
-            name='puesto',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='empleados', to='catalogos.puesto'),
+            model_name="empleado",
+            name="puesto",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="empleados",
+                to="catalogos.puesto",
+            ),
         ),
     ]

@@ -5,42 +5,75 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='Departamento',
+            name="Departamento",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('nombre', models.CharField(max_length=120, unique=True)),
-                ('clave', models.CharField(blank=True, default='', max_length=20, unique=True)),
-                ('activo', models.BooleanField(default=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("nombre", models.CharField(max_length=120, unique=True)),
+                (
+                    "clave",
+                    models.CharField(
+                        blank=True, default="", max_length=20, unique=True
+                    ),
+                ),
+                ("activo", models.BooleanField(default=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
             ],
             options={
-                'db_table': 'cat_departamentos',
-                'ordering': ['nombre'],
+                "db_table": "cat_departamentos",
+                "ordering": ["nombre"],
             },
         ),
         migrations.CreateModel(
-            name='Puesto',
+            name="Puesto",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('nombre', models.CharField(max_length=120, unique=True)),
-                ('clave', models.CharField(blank=True, default='', max_length=20, unique=True)),
-                ('activo', models.BooleanField(default=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('departamento', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='puestos', to='catalogos.departamento')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("nombre", models.CharField(max_length=120, unique=True)),
+                (
+                    "clave",
+                    models.CharField(
+                        blank=True, default="", max_length=20, unique=True
+                    ),
+                ),
+                ("activo", models.BooleanField(default=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "departamento",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="puestos",
+                        to="catalogos.departamento",
+                    ),
+                ),
             ],
             options={
-                'db_table': 'cat_puestos',
-                'ordering': ['nombre'],
+                "db_table": "cat_puestos",
+                "ordering": ["nombre"],
             },
         ),
     ]

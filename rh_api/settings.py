@@ -3,10 +3,12 @@ Django settings for rh_api project.
 Generado por 'django-admin startproject' usando Django 5.2.5.
 """
 
-from pathlib import Path
 import os
 from datetime import timedelta
+from pathlib import Path
+
 from dotenv import load_dotenv
+
 
 # ----------------------------
 # Helpers de entorno
@@ -14,8 +16,10 @@ from dotenv import load_dotenv
 def env_bool(name: str, default: bool = False) -> bool:
     return str(os.getenv(name, str(default))).lower() in ("1", "true", "yes", "on")
 
+
 def env_list(name: str, default: str = "") -> list[str]:
     return [x.strip() for x in os.getenv(name, default).split(",") if x.strip()]
+
 
 # ----------------------------
 # Paths / Env
@@ -34,7 +38,9 @@ ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost")
 CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", "")
 CORS_ALLOW_CREDENTIALS = True
 # Si pones orígenes con esquema http/https en CORS_ALLOWED_ORIGINS, se reutilizan para CSRF:
-CSRF_TRUSTED_ORIGINS = [o for o in CORS_ALLOWED_ORIGINS if o.startswith(("http://", "https://"))]
+CSRF_TRUSTED_ORIGINS = [
+    o for o in CORS_ALLOWED_ORIGINS if o.startswith(("http://", "https://"))
+]
 
 # ----------------------------
 # Apps
@@ -47,7 +53,6 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-
     # Terceros
     "rest_framework",
     "corsheaders",
@@ -55,7 +60,6 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt.token_blacklist",
     "django_filters",
     "simple_history",
-
     # Apps locales (orden importa: core antes porque lo importan otros)
     "core",
     "catalogos",
@@ -131,7 +135,9 @@ DATABASES = {
 # Password validators
 # ----------------------------
 AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
+    },
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
@@ -164,7 +170,9 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 REST_FRAMEWORK = {
     # En dev: AllowAny para que Swagger funcione sin token (cámbialo a IsAuthenticated en prod)
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.AllowAny"],
-    "DEFAULT_AUTHENTICATION_CLASSES": ("rest_framework_simplejwt.authentication.JWTAuthentication",),
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_FILTER_BACKENDS": [
         "django_filters.rest_framework.DjangoFilterBackend",
@@ -182,7 +190,9 @@ if DEBUG:
         "rest_framework.renderers.BrowsableAPIRenderer",
     )
 else:
-    REST_FRAMEWORK["DEFAULT_RENDERER_CLASSES"] = ("rest_framework.renderers.JSONRenderer",)
+    REST_FRAMEWORK["DEFAULT_RENDERER_CLASSES"] = (
+        "rest_framework.renderers.JSONRenderer",
+    )
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "GV-RH API",
@@ -242,7 +252,9 @@ LOGGING = {
     },
     "root": {"handlers": ["console"], "level": LOG_LEVEL},
     "loggers": {
-        "django.db.backends": {"level": "WARNING"},  # pon "INFO" si quieres ver SQL en dev
+        "django.db.backends": {
+            "level": "WARNING"
+        },  # pon "INFO" si quieres ver SQL en dev
         "django.request": {"level": "WARNING"},
     },
 }

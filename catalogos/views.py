@@ -1,45 +1,69 @@
-from rest_framework import viewsets, permissions
-from django_filters import rest_framework as filters
+# catalogos/views.py
+from django.db.models import QuerySet
+from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.utils import extend_schema
+from rest_framework import filters, permissions, viewsets
+
 from .models import Departamento, Puesto
 from .serializers import DepartamentoSerializer, PuestoSerializer
 
-class DepartamentoFilter(filters.FilterSet):
-    q = filters.CharFilter(method='filter_q')
-    activo = filters.BooleanFilter()
 
-    class Meta:
-        model = Departamento
-        fields = ['activo']
+class BaseViewSet(viewsets.ModelViewSet):
+    """Base con permisos, filtros y orden por defecto."""
 
-    def filter_q(self, queryset, name, value):
-        return queryset.filter(nombre__icontains=value)
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
+    ordering = ["id"]
 
-class PuestoFilter(filters.FilterSet):
-    q = filters.CharFilter(method='filter_q')
-    activo = filters.BooleanFilter()
-    departamento = filters.NumberFilter(field_name='departamento_id')
 
-    class Meta:
-        model = Puesto
-        fields = ['activo', 'departamento']
+@extend_schema(tags=["Catálogos"])
+class DepartamentoViewSet(BaseViewSet):
+    """
+    CRUD de departamentos.
+    Por defecto muestra solo registros activos (no borrados lógicamente).
+    Usa `?include_deleted=1` para incluir también los borrados.
+    """
 
-    def filter_q(self, queryset, name, value):
-        return queryset.filter(nombre__icontains=value)
-
-class DepartamentoViewSet(viewsets.ModelViewSet):
-    queryset = Departamento.objects.all()
     serializer_class = DepartamentoSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    filterset_class = DepartamentoFilter
-    search_fields = ['nombre','clave']
-    ordering_fields = ['nombre','created_at','updated_at']
-    ordering = ['nombre']
+    search_fields = ["nombre", "clave"]
+    filterset_fields = ["activo"]
+    ordering_fields = ["id", "nombre", "clave", "created_at", "updated_at"]
 
-class PuestoViewSet(viewsets.ModelViewSet):
-    queryset = Puesto.objects.select_related('departamento').all()
+    def get_queryset(self) -> QuerySet[Departamento]:
+        include_deleted = self.request.query_params.get("include_deleted")
+        qs = (
+            Departamento.all_objects.all()
+            if include_deleted
+            else Departamento.objects.all()
+        )
+        return qs
+
+
+@extend_schema(tags=["Catálogos"])
+class PuestoViewSet(BaseViewSet):
+    """
+    CRUD de puestos.
+    Por defecto muestra solo registros activos (no borrados lógicamente).
+    Usa `?include_deleted=1` para incluir también los borrados.
+    """
+
     serializer_class = PuestoSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    filterset_class = PuestoFilter
-    search_fields = ['nombre','clave','departamento__nombre']
-    ordering_fields = ['nombre','created_at','updated_at']
-    ordering = ['nombre']
+    search_fields = ["nombre", "clave", "departamento__nombre"]
+    filterset_fields = ["activo", "departamento"]
+    ordering_fields = [
+        "id",
+        "nombre",
+        "clave",
+        "departamento",
+        "created_at",
+        "updated_at",
+    ]
+
+    def get_queryset(self) -> QuerySet[Puesto]:
+        include_deleted = self.request.query_params.get("include_deleted")
+        base = Puesto.all_objects if include_deleted else Puesto.objects
+        return base.select_related("departamento").all()

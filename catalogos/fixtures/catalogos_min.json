@@ -1,0 +1,30 @@
+[
+    {
+        "model": "catalogos.departamento",
+        "pk": 1,
+        "fields": {
+            "nombre": "TI",
+            "clave": "TI",
+            "activo": true
+        }
+    },
+    {
+        "model": "catalogos.departamento",
+        "pk": 2,
+        "fields": {
+            "nombre": "RH",
+            "clave": "RH",
+            "activo": true
+        }
+    },
+    {
+        "model": "catalogos.puesto",
+        "pk": 1,
+        "fields": {
+            "nombre": "Analista",
+            "clave": "ANL",
+            "departamento": 1,
+            "activo": true
+        }
+    }
+]

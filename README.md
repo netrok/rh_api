@@ -2,12 +2,12 @@
 # GV-RH API · Django + DRF
 
 ```text
-   ____ ____     ____  _   _        _     
-  / ___|  _ \   |  _ \| | | |  __ _| |__  
- | |  _| |_) |  | |_) | |_| | / _` | '_ \ 
+   ____ ____     ____  _   _        _
+  / ___|  _ \   |  _ \| | | |  __ _| |__
+ | |  _| |_) |  | |_) | |_| | / _` | '_ \
  | |_| |  _ <   |  _ <|  _  || (_| | | | |
   \____|_| \_\  |_| \_\_| |_(_)__, |_| |_|
-                             |___/         
+                             |___/
 Backend de Recursos Humanos con Django 5, DRF, JWT, OpenAPI (Swagger), PostgreSQL, soft delete, auditoría de cambios, filtros/paginación y exportación a Excel.
 
 Tabla de contenidos

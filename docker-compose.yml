@@ -1,0 +1,40 @@
+version: "3.9"
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: rh_user
+      POSTGRES_PASSWORD: rh_pass
+      POSTGRES_DB: rh_db
+    ports: [ "5432:5432" ]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U rh_user -d rh_db" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    environment:
+      DJANGO_SECRET_KEY: dev
+      DJANGO_DEBUG: "True"
+      DJANGO_ALLOWED_HOSTS: 127.0.0.1,localhost
+      DB_NAME: rh_db
+      DB_USER: rh_user
+      DB_PASSWORD: rh_pass
+      DB_HOST: db
+      DB_PORT: "5432"
+      TZ: America/Mexico_City
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
