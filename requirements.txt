@@ -1,18 +1,18 @@
 ﻿# ===== Core =====
 Django==5.2.5
-djangorestframework>=3.15,<4
-drf-spectacular>=0.27,<1
+djangorestframework>=3.15,<3.16
+drf-spectacular>=0.27,<0.28
 djangorestframework-simplejwt>=5.3,<6
-django-filter>=24.2,<25
+django-filter>=24.1,<25
 python-dotenv>=1.0,<2
 
-# ===== PostgreSQL driver (psycopg v3 con binarios precompilados) =====
-psycopg[binary]>=3.1,<4
+# ===== PostgreSQL (psycopg v3 con binarios) =====
+psycopg[binary]>=3.2,<4
 
 # ===== Utilidades =====
-Pillow>=10,<11
+Pillow>=10,<12
 openpyxl>=3.1,<4
-django-simple-history>=3.7,<4
+django-simple-history>=3.6,<4
 
-# ===== Zona horaria para Windows (base de datos tz) =====
+# ===== Zona horaria (Windows) =====
 tzdata>=2024.1,<2026
