@@ -296,10 +296,3 @@ Recomendaciones
 pip freeze > requirements.lock.txt
 
 ✅ No subas secretos. Usa .env, .env.prod y vaults en tus pipelines.
-
-
-
-
-
-
-
