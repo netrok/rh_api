@@ -3,16 +3,17 @@ Django settings for rh_api project.
 Generado por 'django-admin startproject' usando Django 5.2.5.
 """
 
+from __future__ import annotations
+
 import os
 from datetime import timedelta
 from pathlib import Path
 
 from dotenv import load_dotenv
 
-
-# ----------------------------
+# ──────────────────────────────────────────────────────────────────────────────
 # Helpers de entorno
-# ----------------------------
+# ──────────────────────────────────────────────────────────────────────────────
 def env_bool(name: str, default: bool = False) -> bool:
     return str(os.getenv(name, str(default))).lower() in ("1", "true", "yes", "on")
 
@@ -21,15 +22,15 @@ def env_list(name: str, default: str = "") -> list[str]:
     return [x.strip() for x in os.getenv(name, default).split(",") if x.strip()]
 
 
-# ----------------------------
+# ──────────────────────────────────────────────────────────────────────────────
 # Paths / Env
-# ----------------------------
+# ──────────────────────────────────────────────────────────────────────────────
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")  # Carga variables desde .env
 
-# ----------------------------
+# ──────────────────────────────────────────────────────────────────────────────
 # Core / Seguridad básica
-# ----------------------------
+# ──────────────────────────────────────────────────────────────────────────────
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "DEV-ONLY-CHANGE-ME")
 DEBUG = env_bool("DJANGO_DEBUG", True)
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost")
@@ -42,9 +43,9 @@ CSRF_TRUSTED_ORIGINS = [
     o for o in CORS_ALLOWED_ORIGINS if o.startswith(("http://", "https://"))
 ]
 
-# ----------------------------
+# ──────────────────────────────────────────────────────────────────────────────
 # Apps
-# ----------------------------
+# ──────────────────────────────────────────────────────────────────────────────
 INSTALLED_APPS = [
     # Django
     "django.contrib.admin",
@@ -60,15 +61,15 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt.token_blacklist",
     "django_filters",
     "simple_history",
-    # Apps locales (orden importa: core antes porque lo importan otros)
+    # Apps locales (core primero)
     "core",
     "catalogos",
     "empleados",
 ]
 
-# ----------------------------
+# ──────────────────────────────────────────────────────────────────────────────
 # Middleware
-# ----------------------------
+# ──────────────────────────────────────────────────────────────────────────────
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",  # lo más arriba posible y antes de CommonMiddleware
     "django.middleware.security.SecurityMiddleware",
@@ -81,9 +82,9 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-# ----------------------------
+# ──────────────────────────────────────────────────────────────────────────────
 # URLs / Templates / WSGI
-# ----------------------------
+# ──────────────────────────────────────────────────────────────────────────────
 ROOT_URLCONF = "rh_api.urls"
 
 TEMPLATES = [
@@ -104,9 +105,9 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "rh_api.wsgi.application"
 
-# ----------------------------
+# ──────────────────────────────────────────────────────────────────────────────
 # Base de datos: PostgreSQL
-# ----------------------------
+# ──────────────────────────────────────────────────────────────────────────────
 DB_OPTIONS: dict = {}
 # Opcional: esquema propio (e.g., rh) por env
 _db_search_path = os.getenv("DB_SEARCH_PATH")
@@ -125,51 +126,51 @@ DATABASES = {
         "PASSWORD": os.getenv("DB_PASSWORD", ""),
         "HOST": os.getenv("DB_HOST", "localhost"),
         "PORT": os.getenv("DB_PORT", "5432"),
-        "CONN_MAX_AGE": 60,  # pooling simple
+        "CONN_MAX_AGE": 60,           # pooling simple
         "OPTIONS": DB_OPTIONS,
-        "ATOMIC_REQUESTS": True,  # cada request dentro de una transacción
+        "ATOMIC_REQUESTS": True,      # cada request dentro de una transacción
     }
 }
 
-# ----------------------------
+# ──────────────────────────────────────────────────────────────────────────────
 # Password validators
-# ----------------------------
+# ──────────────────────────────────────────────────────────────────────────────
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
-    },
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-# ----------------------------
+# ──────────────────────────────────────────────────────────────────────────────
 # i18n / TZ
-# ----------------------------
+# ──────────────────────────────────────────────────────────────────────────────
 LANGUAGE_CODE = "es-mx"
 TIME_ZONE = "America/Mexico_City"
 USE_I18N = True
 USE_TZ = True
 
-# ----------------------------
+# ──────────────────────────────────────────────────────────────────────────────
 # Static / Media
-# ----------------------------
+# ──────────────────────────────────────────────────────────────────────────────
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-# ----------------------------
+# ──────────────────────────────────────────────────────────────────────────────
 # Auto PK
-# ----------------------------
+# ──────────────────────────────────────────────────────────────────────────────
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# ----------------------------
+# ──────────────────────────────────────────────────────────────────────────────
 # DRF / OpenAPI / Filtros / Paginación / JWT
-# ----------------------------
+# ──────────────────────────────────────────────────────────────────────────────
 REST_FRAMEWORK = {
-    # En dev: AllowAny para que Swagger funcione sin token (cámbialo a IsAuthenticated en prod)
-    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.AllowAny"],
+    # En dev: AllowAny para que Swagger funcione sin token; en prod: IsAuthenticated
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.AllowAny" if DEBUG else "rest_framework.permissions.IsAuthenticated"
+    ],
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
@@ -217,9 +218,9 @@ SIMPLE_JWT = {
     # "AUTH_HEADER_NAME": "HTTP_AUTHORIZATION",  # default
 }
 
-# ----------------------------
+# ──────────────────────────────────────────────────────────────────────────────
 # Seguridad (producción)
-# ----------------------------
+# ──────────────────────────────────────────────────────────────────────────────
 if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
@@ -234,9 +235,9 @@ if not DEBUG:
     # Si vas detrás de un proxy/ingress que pone X-Forwarded-Proto:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
-# ----------------------------
+# ──────────────────────────────────────────────────────────────────────────────
 # Logging
-# ----------------------------
+# ──────────────────────────────────────────────────────────────────────────────
 LOG_LEVEL = "DEBUG" if DEBUG else "INFO"
 LOGGING = {
     "version": 1,
@@ -252,14 +253,12 @@ LOGGING = {
     },
     "root": {"handlers": ["console"], "level": LOG_LEVEL},
     "loggers": {
-        "django.db.backends": {
-            "level": "WARNING"
-        },  # pon "INFO" si quieres ver SQL en dev
+        "django.db.backends": {"level": "WARNING"},  # pon "INFO" si quieres ver SQL en dev
         "django.request": {"level": "WARNING"},
     },
 }
 
-# ----------------------------
+# ──────────────────────────────────────────────────────────────────────────────
 # Opcionales cómodos
-# ----------------------------
+# ──────────────────────────────────────────────────────────────────────────────
 APPEND_SLASH = True  # redirige /ruta a /ruta/

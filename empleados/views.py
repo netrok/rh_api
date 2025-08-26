@@ -1,4 +1,3 @@
-# empleados/views.py
 from typing import Optional
 
 from django.db import models
@@ -14,6 +13,7 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from core.permissions import IsEmpleadoEditorOrReadOnly, IsRHAdmin  # <- NUEVO
 from .models import Empleado
 from .serializers import EmpleadoSerializer
 
@@ -94,7 +94,8 @@ class EmpleadoViewSet(viewsets.ModelViewSet):
     """
 
     serializer_class = EmpleadoSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    # Lectura: autenticado; Escritura: RRHH/Admin (controlado por IsEmpleadoEditorOrReadOnly)
+    permission_classes = [IsEmpleadoEditorOrReadOnly]
     filterset_class = EmpleadoFilter
     search_fields = [
         "num_empleado",
@@ -125,6 +126,13 @@ class EmpleadoViewSet(viewsets.ModelViewSet):
             base.select_related("departamento", "puesto").all().order_by("num_empleado")
         )
 
+    # ── Permisos finos por método/acción ──────────────────────────────────────
+    def get_permissions(self):
+        # DELETE solo Admin (o superuser)
+        if self.request.method == "DELETE":
+            return [IsRHAdmin()]
+        return super().get_permissions()
+
     # ---------- Acciones personalizadas ----------
 
     @extend_schema(
@@ -132,7 +140,7 @@ class EmpleadoViewSet(viewsets.ModelViewSet):
         description="Marca el empleado como eliminado lógicamente (no se borra físicamente).",
         responses={204: OpenApiResponse(description="Eliminado lógicamente")},
     )
-    @action(detail=True, methods=["post"], url_path="soft-delete")
+    @action(detail=True, methods=["post"], url_path="soft-delete", permission_classes=[IsRHAdmin])  # <- SOLO ADMIN
     def soft_delete(self, request: Request, pk: str | None = None) -> Response:
         obj = self.get_object()
         obj.delete()  # soft delete
@@ -144,7 +152,7 @@ class EmpleadoViewSet(viewsets.ModelViewSet):
         responses={200: EmpleadoSerializer},
         examples=[OpenApiExample("Restaurado", value={"detail": "ok"})],
     )
-    @action(detail=True, methods=["post"], url_path="restore")
+    @action(detail=True, methods=["post"], url_path="restore", permission_classes=[IsRHAdmin])  # <- SOLO ADMIN
     def restore(self, request: Request, pk: str | None = None) -> Response:
         obj = self.get_object()
         obj.restore()
