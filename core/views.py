@@ -14,9 +14,7 @@ from .serializers import PingSerializer
 @extend_schema(
     summary="Health check",
     description='Devuelve `{ "status": "ok" }` para confirmar que el servicio está arriba.',
-    responses={
-        200: OpenApiResponse(response=PingSerializer, description="Service is healthy")
-    },
+    responses={200: OpenApiResponse(response=PingSerializer, description="Service is healthy")},
     examples=[OpenApiExample("OK", value={"status": "ok"})],
     tags=["Core"],
     operation_id="ping",
