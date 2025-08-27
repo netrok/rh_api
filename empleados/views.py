@@ -1,13 +1,19 @@
-﻿from __future__ import annotations
+﻿# empleados/views.py
+from __future__ import annotations
 from typing import Optional
+from io import BytesIO
+from datetime import date
 
-from django.db import models
-from django.http import HttpResponse
+from django.db.models import Q
+from django.http import FileResponse
 from django_filters import rest_framework as filters
+
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema
+
 from openpyxl import Workbook
 from openpyxl.styles import Font
+
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import JSONParser, FormParser, MultiPartParser
@@ -25,10 +31,10 @@ from .serializers import EmpleadoSerializer
 class EmpleadoFilter(filters.FilterSet):
     """
     Filtros combinables para Empleado.
-    - q: búsqueda amplia (num_empleado, nombre, apellidos, email, curp, rfc, nss, depto, puesto)
+    - q: búsqueda amplia
     - activo: bool
     - departamento/puesto: por ID
-    - departamento_nombre/puesto_nombre: búsqueda por nombre (icontains)
+    - departamento_nombre/puesto_nombre: icontains
     - genero: 'M' | 'F' | 'O'
     - deleted: True -> solo borrados, False -> solo vivos, None -> sin alterar queryset base
     """
@@ -60,16 +66,16 @@ class EmpleadoFilter(filters.FilterSet):
 
     def filter_q(self, queryset, name, value):
         return queryset.filter(
-            models.Q(num_empleado__icontains=value)
-            | models.Q(nombres__icontains=value)
-            | models.Q(apellido_paterno__icontains=value)
-            | models.Q(apellido_materno__icontains=value)
-            | models.Q(email__icontains=value)
-            | models.Q(curp__icontains=value)
-            | models.Q(rfc__icontains=value)
-            | models.Q(nss__icontains=value)
-            | models.Q(departamento__nombre__icontains=value)
-            | models.Q(puesto__nombre__icontains=value)
+            Q(num_empleado__icontains=value)
+            | Q(nombres__icontains=value)
+            | Q(apellido_paterno__icontains=value)
+            | Q(apellido_materno__icontains=value)
+            | Q(email__icontains=value)
+            | Q(curp__icontains=value)
+            | Q(rfc__icontains=value)
+            | Q(nss__icontains=value)
+            | Q(departamento__nombre__icontains=value)
+            | Q(puesto__nombre__icontains=value)
         )
 
     def filter_deleted(self, queryset, name, value: Optional[bool]):
@@ -94,7 +100,6 @@ class EmpleadoViewSet(viewsets.ModelViewSet):
     """
 
     serializer_class = EmpleadoSerializer
-    # Lectura: autenticado; Escritura: RRHH/Admin (IsEmpleadoEditorOrReadOnly)
     permission_classes = [IsEmpleadoEditorOrReadOnly]
     filterset_class = EmpleadoFilter
     search_fields = [
@@ -115,7 +120,6 @@ class EmpleadoViewSet(viewsets.ModelViewSet):
         "apellido_paterno",
         "created_at",
     ]
-    #  acepta JSON y también formularios/archivos
     parser_classes = (JSONParser, FormParser, MultiPartParser)
 
     def get_queryset(self):
@@ -126,17 +130,19 @@ class EmpleadoViewSet(viewsets.ModelViewSet):
         """
         include_deleted = self.request.query_params.get("include_deleted")
         base = Empleado.all_objects if include_deleted else Empleado.objects
-        return base.select_related("departamento", "puesto").all().order_by("num_empleado")
+        return (
+            base.select_related("departamento", "puesto")
+            .all()
+            .order_by("num_empleado")
+        )
 
-    #  Permisos finos por método/acción 
     def get_permissions(self):
         # DELETE/acciones especiales solo Admin (o superuser)
         if self.request.method == "DELETE":
             return [IsRHAdmin()]
         return super().get_permissions()
 
-    # ---------- Acciones personalizadas ----------
-
+    # ---------- Acciones: soft delete / restore ----------
     @extend_schema(
         summary="Soft delete",
         description="Marca el empleado como eliminado lógicamente (no se borra físicamente).",
@@ -160,7 +166,7 @@ class EmpleadoViewSet(viewsets.ModelViewSet):
         obj.restore()
         return Response(self.get_serializer(obj).data, status=status.HTTP_200_OK)
 
-    # Serializer para el historial (solo para documentación)
+    # ---------- Historial ----------
     class _HistoryRecordSerializer(serializers.Serializer):
         history_id = serializers.IntegerField()
         history_date = serializers.DateTimeField()
@@ -209,28 +215,67 @@ class EmpleadoViewSet(viewsets.ModelViewSet):
                     "history_id": h.pk,
                     "history_date": h.history_date.isoformat(),
                     "history_user": str(h.history_user) if h.history_user else None,
-                    "history_type": h.history_type,  # '+' creado, '~' modificado, '-' borrado
+                    "history_type": h.history_type,
                     "num_empleado": h.num_empleado,
                     "nombres": h.nombres,
-                    "apellidos": f"{h.apellido_paterno} {h.apellido_materno}".strip(),
-                    "departamento_id": h.departamento_id,
-                    "puesto_id": h.puesto_id,
-                    "activo": h.activo,
-                    "deleted_at": h.deleted_at.isoformat() if h.deleted_at else None,
+                    "apellidos": f"{getattr(h, 'apellido_paterno', '')} {getattr(h, 'apellido_materno', '')}".strip(),
+                    "departamento_id": getattr(h, "departamento_id", None),
+                    "puesto_id": getattr(h, "puesto_id", None),
+                    "activo": getattr(h, "activo", None),
+                    "deleted_at": h.deleted_at.isoformat() if getattr(h, "deleted_at", None) else None,
                 }
             )
         return Response(records)
 
+    # ---------- Helpers export ----------
+    def _apply_front_filters(self, qs):
+        """Aplica filtros del front: q, departamento_id, puesto_id, activo."""
+        request = self.request
+        q = request.query_params.get("q")
+        depto_id = request.query_params.get("departamento_id")
+        puesto_id = request.query_params.get("puesto_id")
+        activo = request.query_params.get("activo")
+
+        if q:
+            qs = qs.filter(
+                Q(nombres__icontains=q)
+                | Q(apellido_paterno__icontains=q)
+                | Q(apellido_materno__icontains=q)
+                | Q(num_empleado__icontains=q)
+                | Q(email__icontains=q)
+                | Q(telefono__icontains=q)
+            )
+
+        if depto_id:
+            qs = qs.filter(departamento_id=depto_id)
+
+        if puesto_id:
+            qs = qs.filter(puesto_id=puesto_id)
+
+        if activo is not None:
+            val = str(activo).lower()
+            if val in ("true", "1", "t", "yes", "y"):
+                qs = qs.filter(activo=True)
+            elif val in ("false", "0", "f", "no", "n"):
+                qs = qs.filter(activo=False)
+
+        return qs
+
+    def _base_queryset_for_export(self):
+        qs = self.get_queryset()
+        qs = self.filter_queryset(qs)  # respeta Search/Ordering
+        qs = self._apply_front_filters(qs)
+        return qs.select_related("departamento", "puesto")
+
+    # ---------- Exportación SOLO Excel ----------
     @extend_schema(
         summary="Exportación a Excel",
         description="Descarga un XLSX con el resultado filtrado/ordenado actual.",
-        responses={
-            (200, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): OpenApiTypes.BINARY
-        },
+        responses={(200, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): OpenApiTypes.BINARY},
     )
-    @action(detail=False, methods=["get"], url_path="export-excel")
-    def export_excel(self, request: Request) -> HttpResponse:
-        qs = self.filter_queryset(self.get_queryset())
+    @action(detail=False, methods=["get"], url_path="export/excel")
+    def export_excel(self, request: Request, *args, **kwargs) -> FileResponse:
+        qs = self._base_queryset_for_export().order_by("id")
 
         wb = Workbook()
         ws = wb.active
@@ -238,21 +283,16 @@ class EmpleadoViewSet(viewsets.ModelViewSet):
 
         headers = [
             "ID",
-            "Num Empleado",
+            "Num. empleado",
             "Nombres",
-            "Apellido Paterno",
-            "Apellido Materno",
-            "Email",
-            "Género",
-            "Estado Civil",
+            "Apellido paterno",
+            "Apellido materno",
             "Departamento",
             "Puesto",
-            "Fecha Nacimiento",
-            "Fecha Ingreso",
+            "Fecha ingreso",
+            "Email",
+            "Teléfono",
             "Activo",
-            "Eliminado",
-            "Creado",
-            "Actualizado",
         ]
         ws.append(headers)
         for cell in ws[1]:
@@ -263,27 +303,39 @@ class EmpleadoViewSet(viewsets.ModelViewSet):
             ws.append(
                 [
                     e.id,
-                    e.num_empleado,
-                    e.nombres,
-                    e.apellido_paterno,
-                    e.apellido_materno,
-                    e.email,
-                    e.get_genero_display(),
-                    e.get_estado_civil_display(),
-                    e.departamento.nombre if e.departamento else "",
-                    e.puesto.nombre if e.puesto else "",
-                    e.fecha_nacimiento.isoformat() if e.fecha_nacimiento else "",
-                    e.fecha_ingreso.isoformat() if e.fecha_ingreso else "",
-                    "Sí" if e.activo else "No",
-                    e.deleted_at.isoformat() if e.deleted_at else "",
-                    e.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-                    e.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
+                    e.num_empleado or "",
+                    e.nombres or "",
+                    e.apellido_paterno or "",
+                    e.apellido_materno or "",
+                    getattr(getattr(e, "departamento", None), "nombre", "") or "",
+                    getattr(getattr(e, "puesto", None), "nombre", "") or "",
+                    e.fecha_ingreso if getattr(e, "fecha_ingreso", None) else "",
+                    e.email or "",
+                    getattr(e, "telefono", "") or "",
+                    "Sí" if getattr(e, "activo", False) else "No",
                 ]
             )
 
-        resp = HttpResponse(
-            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        # Auto ancho simple
+        for col in ws.columns:
+            max_len = 10
+            for cell in col:
+                val = str(cell.value) if cell.value is not None else ""
+                if len(val) > max_len:
+                    max_len = len(val)
+            ws.column_dimensions[col[0].column_letter].width = min(max_len + 2, 40)
+
+        # Respuesta binaria robusta
+        bio = BytesIO()
+        wb.save(bio)     # openpyxl crea el ZIP XLSX correcto
+        bio.seek(0)
+
+        filename = f"empleados_{date.today().isoformat()}.xlsx"
+        resp = FileResponse(
+            bio,
+            as_attachment=True,
+            filename=filename,
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
-        resp["Content-Disposition"] = 'attachment; filename="empleados.xlsx"'
-        wb.save(resp)
+        resp["Cache-Control"] = "no-transform"
         return resp
