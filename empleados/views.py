@@ -12,7 +12,7 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema
 
 from openpyxl import Workbook
-from openpyxl.styles import Font
+from openpyxl.styles import Font, numbers
 
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
@@ -316,6 +316,11 @@ class EmpleadoViewSet(viewsets.ModelViewSet):
                 ]
             )
 
+        # Filtros y formato de fecha (columna H = 8)
+        ws.auto_filter.ref = ws.dimensions
+        for row in ws.iter_rows(min_row=2, min_col=8, max_col=8):
+            row[0].number_format = numbers.FORMAT_DATE_YYYYMMDD2
+
         # Auto ancho simple
         for col in ws.columns:
             max_len = 10
@@ -327,7 +332,7 @@ class EmpleadoViewSet(viewsets.ModelViewSet):
 
         # Respuesta binaria robusta
         bio = BytesIO()
-        wb.save(bio)     # openpyxl crea el ZIP XLSX correcto
+        wb.save(bio)  # openpyxl crea un ZIP XLSX válido
         bio.seek(0)
 
         filename = f"empleados_{date.today().isoformat()}.xlsx"
