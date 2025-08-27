@@ -1,3 +1,4 @@
+﻿from __future__ import annotations
 from typing import Optional
 
 from django.db import models
@@ -7,13 +8,13 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema
 from openpyxl import Workbook
 from openpyxl.styles import Font
-from rest_framework import permissions, serializers, status, viewsets
+from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.parsers import JSONParser, FormParser, MultiPartParser
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from core.permissions import IsEmpleadoEditorOrReadOnly, IsRHAdmin  # <- NUEVO
+from core.permissions import IsEmpleadoEditorOrReadOnly, IsRHAdmin
 from .models import Empleado
 from .serializers import EmpleadoSerializer
 
@@ -72,7 +73,6 @@ class EmpleadoFilter(filters.FilterSet):
         )
 
     def filter_deleted(self, queryset, name, value: Optional[bool]):
-        # No rompemos el queryset base (que puede venir con include_deleted=1)
         if value is True:
             return queryset.filter(deleted_at__isnull=False)
         if value is False:
@@ -94,7 +94,7 @@ class EmpleadoViewSet(viewsets.ModelViewSet):
     """
 
     serializer_class = EmpleadoSerializer
-    # Lectura: autenticado; Escritura: RRHH/Admin (controlado por IsEmpleadoEditorOrReadOnly)
+    # Lectura: autenticado; Escritura: RRHH/Admin (IsEmpleadoEditorOrReadOnly)
     permission_classes = [IsEmpleadoEditorOrReadOnly]
     filterset_class = EmpleadoFilter
     search_fields = [
@@ -103,6 +103,9 @@ class EmpleadoViewSet(viewsets.ModelViewSet):
         "apellido_paterno",
         "apellido_materno",
         "email",
+        "curp",
+        "rfc",
+        "nss",
         "departamento__nombre",
         "puesto__nombre",
     ]
@@ -112,7 +115,8 @@ class EmpleadoViewSet(viewsets.ModelViewSet):
         "apellido_paterno",
         "created_at",
     ]
-    parser_classes = [MultiPartParser, FormParser]
+    #  acepta JSON y también formularios/archivos
+    parser_classes = (JSONParser, FormParser, MultiPartParser)
 
     def get_queryset(self):
         """
@@ -122,13 +126,11 @@ class EmpleadoViewSet(viewsets.ModelViewSet):
         """
         include_deleted = self.request.query_params.get("include_deleted")
         base = Empleado.all_objects if include_deleted else Empleado.objects
-        return (
-            base.select_related("departamento", "puesto").all().order_by("num_empleado")
-        )
+        return base.select_related("departamento", "puesto").all().order_by("num_empleado")
 
-    # ── Permisos finos por método/acción ──────────────────────────────────────
+    #  Permisos finos por método/acción 
     def get_permissions(self):
-        # DELETE solo Admin (o superuser)
+        # DELETE/acciones especiales solo Admin (o superuser)
         if self.request.method == "DELETE":
             return [IsRHAdmin()]
         return super().get_permissions()
@@ -140,7 +142,7 @@ class EmpleadoViewSet(viewsets.ModelViewSet):
         description="Marca el empleado como eliminado lógicamente (no se borra físicamente).",
         responses={204: OpenApiResponse(description="Eliminado lógicamente")},
     )
-    @action(detail=True, methods=["post"], url_path="soft-delete", permission_classes=[IsRHAdmin])  # <- SOLO ADMIN
+    @action(detail=True, methods=["post"], url_path="soft-delete", permission_classes=[IsRHAdmin])
     def soft_delete(self, request: Request, pk: str | None = None) -> Response:
         obj = self.get_object()
         obj.delete()  # soft delete
@@ -152,13 +154,13 @@ class EmpleadoViewSet(viewsets.ModelViewSet):
         responses={200: EmpleadoSerializer},
         examples=[OpenApiExample("Restaurado", value={"detail": "ok"})],
     )
-    @action(detail=True, methods=["post"], url_path="restore", permission_classes=[IsRHAdmin])  # <- SOLO ADMIN
+    @action(detail=True, methods=["post"], url_path="restore", permission_classes=[IsRHAdmin])
     def restore(self, request: Request, pk: str | None = None) -> Response:
         obj = self.get_object()
         obj.restore()
         return Response(self.get_serializer(obj).data, status=status.HTTP_200_OK)
 
-    # Serializer para el historial (inline para documentar OpenAPI)
+    # Serializer para el historial (solo para documentación)
     class _HistoryRecordSerializer(serializers.Serializer):
         history_id = serializers.IntegerField()
         history_date = serializers.DateTimeField()
@@ -223,10 +225,7 @@ class EmpleadoViewSet(viewsets.ModelViewSet):
         summary="Exportación a Excel",
         description="Descarga un XLSX con el resultado filtrado/ordenado actual.",
         responses={
-            (
-                200,
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            ): OpenApiTypes.BINARY
+            (200, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): OpenApiTypes.BINARY
         },
     )
     @action(detail=False, methods=["get"], url_path="export-excel")
@@ -256,7 +255,6 @@ class EmpleadoViewSet(viewsets.ModelViewSet):
             "Actualizado",
         ]
         ws.append(headers)
-        # Estilo cabecera
         for cell in ws[1]:
             cell.font = Font(bold=True)
         ws.freeze_panes = "A2"

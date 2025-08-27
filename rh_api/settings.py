@@ -1,8 +1,4 @@
-"""
-Django settings for rh_api project.
-Generado por 'django-admin startproject' usando Django 5.2.5.
-"""
-
+﻿"""Django settings for rh_api project."""
 from __future__ import annotations
 
 import os
@@ -11,26 +7,24 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-# ──────────────────────────────────────────────────────────────────────────────
+# ──
 # Helpers de entorno
-# ──────────────────────────────────────────────────────────────────────────────
+# ─
 def env_bool(name: str, default: bool = False) -> bool:
     return str(os.getenv(name, str(default))).lower() in ("1", "true", "yes", "on")
-
 
 def env_list(name: str, default: str = "") -> list[str]:
     return [x.strip() for x in os.getenv(name, default).split(",") if x.strip()]
 
-
-# ──────────────────────────────────────────────────────────────────────────────
+# 
 # Paths / Env
-# ──────────────────────────────────────────────────────────────────────────────
+# 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")  # Carga variables desde .env
 
-# ──────────────────────────────────────────────────────────────────────────────
+# 
 # Core / Seguridad básica
-# ──────────────────────────────────────────────────────────────────────────────
+# 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "DEV-ONLY-CHANGE-ME")
 DEBUG = env_bool("DJANGO_DEBUG", True)
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost")
@@ -38,14 +32,11 @@ ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost")
 # CORS / CSRF
 CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", "")
 CORS_ALLOW_CREDENTIALS = True
-# Si pones orígenes con esquema http/https en CORS_ALLOWED_ORIGINS, se reutilizan para CSRF:
-CSRF_TRUSTED_ORIGINS = [
-    o for o in CORS_ALLOWED_ORIGINS if o.startswith(("http://", "https://"))
-]
+CSRF_TRUSTED_ORIGINS = [o for o in CORS_ALLOWED_ORIGINS if o.startswith(("http://", "https://"))]
 
-# ──────────────────────────────────────────────────────────────────────────────
+# 
 # Apps
-# ──────────────────────────────────────────────────────────────────────────────
+# 
 INSTALLED_APPS = [
     # Django
     "django.contrib.admin",
@@ -61,15 +52,15 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt.token_blacklist",
     "django_filters",
     "simple_history",
-    # Apps locales (core primero)
+    # Apps locales
     "core",
     "catalogos",
     "empleados",
 ]
 
-# ──────────────────────────────────────────────────────────────────────────────
+# 
 # Middleware
-# ──────────────────────────────────────────────────────────────────────────────
+# 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",  # lo más arriba posible y antes de CommonMiddleware
     "django.middleware.security.SecurityMiddleware",
@@ -82,15 +73,15 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-# ──────────────────────────────────────────────────────────────────────────────
+# 
 # URLs / Templates / WSGI
-# ──────────────────────────────────────────────────────────────────────────────
+# 
 ROOT_URLCONF = "rh_api.urls"
 
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],  # puedes añadir BASE_DIR / "templates"
+        "DIRS": [],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -105,15 +96,13 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "rh_api.wsgi.application"
 
-# ──────────────────────────────────────────────────────────────────────────────
+# 
 # Base de datos: PostgreSQL
-# ──────────────────────────────────────────────────────────────────────────────
+# 
 DB_OPTIONS: dict = {}
-# Opcional: esquema propio (e.g., rh) por env
 _db_search_path = os.getenv("DB_SEARCH_PATH")
 if _db_search_path:
     DB_OPTIONS["options"] = f"-c search_path={_db_search_path}"
-# Opcional: SSL por env (ej. require)
 _db_sslmode = os.getenv("DB_SSLMODE")
 if _db_sslmode:
     DB_OPTIONS["sslmode"] = _db_sslmode  # e.g., "require"
@@ -126,15 +115,15 @@ DATABASES = {
         "PASSWORD": os.getenv("DB_PASSWORD", ""),
         "HOST": os.getenv("DB_HOST", "localhost"),
         "PORT": os.getenv("DB_PORT", "5432"),
-        "CONN_MAX_AGE": 60,           # pooling simple
+        "CONN_MAX_AGE": 60,
         "OPTIONS": DB_OPTIONS,
-        "ATOMIC_REQUESTS": True,      # cada request dentro de una transacción
+        "ATOMIC_REQUESTS": True,
     }
 }
 
-# ──────────────────────────────────────────────────────────────────────────────
+# 
 # Password validators
-# ──────────────────────────────────────────────────────────────────────────────
+# 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
@@ -142,32 +131,32 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-# ──────────────────────────────────────────────────────────────────────────────
+# 
 # i18n / TZ
-# ──────────────────────────────────────────────────────────────────────────────
+# 
 LANGUAGE_CODE = "es-mx"
 TIME_ZONE = "America/Mexico_City"
 USE_I18N = True
 USE_TZ = True
 
-# ──────────────────────────────────────────────────────────────────────────────
+# 
 # Static / Media
-# ──────────────────────────────────────────────────────────────────────────────
+# 
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-# ──────────────────────────────────────────────────────────────────────────────
+# 
 # Auto PK
-# ──────────────────────────────────────────────────────────────────────────────
+# 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# ──────────────────────────────────────────────────────────────────────────────
+# 
 # DRF / OpenAPI / Filtros / Paginación / JWT
-# ──────────────────────────────────────────────────────────────────────────────
+# 
 REST_FRAMEWORK = {
-    # En dev: AllowAny para que Swagger funcione sin token; en prod: IsAuthenticated
+    # En dev: AllowAny; en prod: IsAuthenticated
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.AllowAny" if DEBUG else "rest_framework.permissions.IsAuthenticated"
     ],
@@ -182,24 +171,26 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": int(os.getenv("API_PAGE_SIZE", "10")),
+    #  Acepta JSON, x-www-form-urlencoded y multipart (evita 415)
+    "DEFAULT_PARSER_CLASSES": (
+        "rest_framework.parsers.JSONParser",
+        "rest_framework.parsers.FormParser",
+        "rest_framework.parsers.MultiPartParser",
+    ),
+    #  Renderers: Browsable API solo en DEBUG
+    "DEFAULT_RENDERER_CLASSES": (
+        ("rest_framework.renderers.JSONRenderer",
+         "rest_framework.renderers.BrowsableAPIRenderer")
+        if DEBUG else
+        ("rest_framework.renderers.JSONRenderer",)
+    ),
 }
-
-# Renderers: sin Browsable API en prod
-if DEBUG:
-    REST_FRAMEWORK["DEFAULT_RENDERER_CLASSES"] = (
-        "rest_framework.renderers.JSONRenderer",
-        "rest_framework.renderers.BrowsableAPIRenderer",
-    )
-else:
-    REST_FRAMEWORK["DEFAULT_RENDERER_CLASSES"] = (
-        "rest_framework.renderers.JSONRenderer",
-    )
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "GV-RH API",
     "DESCRIPTION": "Backend de Recursos Humanos",
     "VERSION": "1.0.0",
-    "SERVE_INCLUDE_SCHEMA": False,  # el endpoint /api/schema/ ya entrega el esquema
+    "SERVE_INCLUDE_SCHEMA": False,
     "SWAGGER_UI_SETTINGS": {
         "persistAuthorization": True,
         "displayRequestDuration": True,
@@ -215,12 +206,11 @@ SIMPLE_JWT = {
     "ALGORITHM": "HS256",
     "SIGNING_KEY": SECRET_KEY,
     "AUTH_HEADER_TYPES": ("Bearer",),
-    # "AUTH_HEADER_NAME": "HTTP_AUTHORIZATION",  # default
 }
 
-# ──────────────────────────────────────────────────────────────────────────────
+# 
 # Seguridad (producción)
-# ──────────────────────────────────────────────────────────────────────────────
+# 
 if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
@@ -232,12 +222,11 @@ if not DEBUG:
     SECURE_SSL_REDIRECT = True
     SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
     X_FRAME_OPTIONS = "DENY"
-    # Si vas detrás de un proxy/ingress que pone X-Forwarded-Proto:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
-# ──────────────────────────────────────────────────────────────────────────────
+# 
 # Logging
-# ──────────────────────────────────────────────────────────────────────────────
+# 
 LOG_LEVEL = "DEBUG" if DEBUG else "INFO"
 LOGGING = {
     "version": 1,
@@ -253,12 +242,12 @@ LOGGING = {
     },
     "root": {"handlers": ["console"], "level": LOG_LEVEL},
     "loggers": {
-        "django.db.backends": {"level": "WARNING"},  # pon "INFO" si quieres ver SQL en dev
+        "django.db.backends": {"level": "WARNING"},
         "django.request": {"level": "WARNING"},
     },
 }
 
-# ──────────────────────────────────────────────────────────────────────────────
+# 
 # Opcionales cómodos
-# ──────────────────────────────────────────────────────────────────────────────
+# 
 APPEND_SLASH = True  # redirige /ruta a /ruta/
