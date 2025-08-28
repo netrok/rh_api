@@ -9,12 +9,13 @@ from django.http import FileResponse
 from django_filters import rest_framework as filters
 
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema
+from drf_spectacular.utils import OpenApiExample, extend_schema
 
 from openpyxl import Workbook
 from openpyxl.styles import Font, numbers
 
 from rest_framework import serializers, status, viewsets
+from rest_framework import filters as drf_filters  # <-- alias para Search/Ordering
 from rest_framework.decorators import action
 from rest_framework.parsers import JSONParser, FormParser, MultiPartParser
 from rest_framework.request import Request
@@ -101,7 +102,11 @@ class EmpleadoViewSet(viewsets.ModelViewSet):
 
     serializer_class = EmpleadoSerializer
     permission_classes = [IsEmpleadoEditorOrReadOnly]
+
+    # Backends para filtros/búsqueda/orden
     filterset_class = EmpleadoFilter
+    filter_backends = [filters.DjangoFilterBackend, drf_filters.SearchFilter, drf_filters.OrderingFilter]
+
     search_fields = [
         "num_empleado",
         "nombres",
@@ -120,6 +125,7 @@ class EmpleadoViewSet(viewsets.ModelViewSet):
         "apellido_paterno",
         "created_at",
     ]
+
     parser_classes = (JSONParser, FormParser, MultiPartParser)
 
     def get_queryset(self):
@@ -129,9 +135,12 @@ class EmpleadoViewSet(viewsets.ModelViewSet):
         Combina con ?deleted=true|false para filtrar explícitamente.
         """
         include_deleted = self.request.query_params.get("include_deleted")
-        base = Empleado.all_objects if include_deleted else Empleado.objects
+        has_all = getattr(Empleado, "all_objects", None)
+        base_manager = has_all if include_deleted else Empleado.objects
+        base = base_manager or Empleado.objects
+
         return (
-            base.select_related("departamento", "puesto")
+            base.select_related("departamento", "puesto", "turno", "horario")
             .all()
             .order_by("num_empleado")
         )
@@ -146,12 +155,12 @@ class EmpleadoViewSet(viewsets.ModelViewSet):
     @extend_schema(
         summary="Soft delete",
         description="Marca el empleado como eliminado lógicamente (no se borra físicamente).",
-        responses={204: OpenApiResponse(description="Eliminado lógicamente")},
+        responses={204: OpenApiTypes.NONE},
     )
     @action(detail=True, methods=["post"], url_path="soft-delete", permission_classes=[IsRHAdmin])
     def soft_delete(self, request: Request, pk: str | None = None) -> Response:
         obj = self.get_object()
-        obj.delete()  # soft delete
+        obj.delete()  # soft delete (tu modelo debe implementarlo)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @extend_schema(
@@ -163,6 +172,7 @@ class EmpleadoViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"], url_path="restore", permission_classes=[IsRHAdmin])
     def restore(self, request: Request, pk: str | None = None) -> Response:
         obj = self.get_object()
+        # requiere método restore() en tu modelo/manager
         obj.restore()
         return Response(self.get_serializer(obj).data, status=status.HTTP_200_OK)
 
@@ -183,25 +193,23 @@ class EmpleadoViewSet(viewsets.ModelViewSet):
     @extend_schema(
         summary="Historial de cambios",
         description="Devuelve el historial auditado del empleado (django-simple-history).",
-        responses={200: OpenApiResponse(response=_HistoryRecordSerializer(many=True))},
+        responses={200: _HistoryRecordSerializer(many=True)},
         examples=[
             OpenApiExample(
                 "Ejemplo",
-                value=[
-                    {
-                        "history_id": 1,
-                        "history_date": "2025-08-24T18:00:00Z",
-                        "history_user": "admin",
-                        "history_type": "+",
-                        "num_empleado": "E001",
-                        "nombres": "Juan",
-                        "apellidos": "Pérez López",
-                        "departamento_id": 1,
-                        "puesto_id": 2,
-                        "activo": True,
-                        "deleted_at": None,
-                    }
-                ],
+                value=[{
+                    "history_id": 1,
+                    "history_date": "2025-08-24T18:00:00Z",
+                    "history_user": "admin",
+                    "history_type": "+",
+                    "num_empleado": "E001",
+                    "nombres": "Juan",
+                    "apellidos": "Pérez López",
+                    "departamento_id": 1,
+                    "puesto_id": 2,
+                    "activo": True,
+                    "deleted_at": None,
+                }],
             )
         ],
     )
@@ -209,22 +217,21 @@ class EmpleadoViewSet(viewsets.ModelViewSet):
     def history(self, request: Request, pk: str | None = None) -> Response:
         obj = self.get_object()
         records: list[dict] = []
+        # requiere django-simple-history configurado
         for h in obj.history.select_related("history_user").order_by("-history_date"):
-            records.append(
-                {
-                    "history_id": h.pk,
-                    "history_date": h.history_date.isoformat(),
-                    "history_user": str(h.history_user) if h.history_user else None,
-                    "history_type": h.history_type,
-                    "num_empleado": h.num_empleado,
-                    "nombres": h.nombres,
-                    "apellidos": f"{getattr(h, 'apellido_paterno', '')} {getattr(h, 'apellido_materno', '')}".strip(),
-                    "departamento_id": getattr(h, "departamento_id", None),
-                    "puesto_id": getattr(h, "puesto_id", None),
-                    "activo": getattr(h, "activo", None),
-                    "deleted_at": h.deleted_at.isoformat() if getattr(h, "deleted_at", None) else None,
-                }
-            )
+            records.append({
+                "history_id": h.pk,
+                "history_date": h.history_date.isoformat(),
+                "history_user": str(h.history_user) if h.history_user else None,
+                "history_type": h.history_type,
+                "num_empleado": h.num_empleado,
+                "nombres": h.nombres,
+                "apellidos": f"{getattr(h, 'apellido_paterno', '')} {getattr(h, 'apellido_materno', '')}".strip(),
+                "departamento_id": getattr(h, "departamento_id", None),
+                "puesto_id": getattr(h, "puesto_id", None),
+                "activo": getattr(h, "activo", None),
+                "deleted_at": h.deleted_at.isoformat() if getattr(h, "deleted_at", None) else None,
+            })
         return Response(records)
 
     # ---------- Helpers export ----------
@@ -254,16 +261,16 @@ class EmpleadoViewSet(viewsets.ModelViewSet):
 
         if activo is not None:
             val = str(activo).lower()
-            if val in ("true", "1", "t", "yes", "y"):
+            if val in {"true", "1", "t", "yes", "y"}:
                 qs = qs.filter(activo=True)
-            elif val in ("false", "0", "f", "no", "n"):
+            elif val in {"false", "0", "f", "no", "n"}:
                 qs = qs.filter(activo=False)
 
         return qs
 
     def _base_queryset_for_export(self):
         qs = self.get_queryset()
-        qs = self.filter_queryset(qs)  # respeta Search/Ordering
+        qs = self.filter_queryset(qs)  # respeta DjangoFilter/Search/Ordering
         qs = self._apply_front_filters(qs)
         return qs.select_related("departamento", "puesto")
 
@@ -300,28 +307,26 @@ class EmpleadoViewSet(viewsets.ModelViewSet):
         ws.freeze_panes = "A2"
 
         for e in qs:
-            ws.append(
-                [
-                    e.id,
-                    e.num_empleado or "",
-                    e.nombres or "",
-                    e.apellido_paterno or "",
-                    e.apellido_materno or "",
-                    getattr(getattr(e, "departamento", None), "nombre", "") or "",
-                    getattr(getattr(e, "puesto", None), "nombre", "") or "",
-                    e.fecha_ingreso if getattr(e, "fecha_ingreso", None) else "",
-                    e.email or "",
-                    getattr(e, "telefono", "") or "",
-                    "Sí" if getattr(e, "activo", False) else "No",
-                ]
-            )
+            ws.append([
+                e.id,
+                e.num_empleado or "",
+                e.nombres or "",
+                e.apellido_paterno or "",
+                e.apellido_materno or "",
+                getattr(getattr(e, "departamento", None), "nombre", "") or "",
+                getattr(getattr(e, "puesto", None), "nombre", "") or "",
+                e.fecha_ingreso if getattr(e, "fecha_ingreso", None) else "",
+                e.email or "",
+                getattr(e, "telefono", "") or "",
+                "Sí" if getattr(e, "activo", False) else "No",
+            ])
 
         # Filtros y formato de fecha (columna H = 8)
         ws.auto_filter.ref = ws.dimensions
         for row in ws.iter_rows(min_row=2, min_col=8, max_col=8):
             row[0].number_format = numbers.FORMAT_DATE_YYYYMMDD2
 
-        # Auto ancho simple
+        # Auto-ancho simple
         for col in ws.columns:
             max_len = 10
             for cell in col:
@@ -330,9 +335,8 @@ class EmpleadoViewSet(viewsets.ModelViewSet):
                     max_len = len(val)
             ws.column_dimensions[col[0].column_letter].width = min(max_len + 2, 40)
 
-        # Respuesta binaria robusta
         bio = BytesIO()
-        wb.save(bio)  # openpyxl crea un ZIP XLSX válido
+        wb.save(bio)
         bio.seek(0)
 
         filename = f"empleados_{date.today().isoformat()}.xlsx"

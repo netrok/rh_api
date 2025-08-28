@@ -1,7 +1,8 @@
 # catalogos/serializers.py
-from rest_framework import serializers
+from __future__ import annotations
 
-from .models import Departamento, Puesto
+from rest_framework import serializers
+from .models import Departamento, Puesto, Turno, Horario
 
 
 class DepartamentoSerializer(serializers.ModelSerializer):
@@ -41,3 +42,33 @@ class PuestoSerializer(serializers.ModelSerializer):
             "updated_at",
             "deleted_at",
         ]
+
+
+class TurnoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Turno
+        fields = [
+            "id",
+            "nombre",
+            "clave",
+            "activo",
+            "created_at",
+            "updated_at",
+            "deleted_at",
+        ]
+        read_only_fields = ["created_at", "updated_at", "deleted_at"]
+
+
+class HorarioSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Horario
+        fields = [
+            "id",
+            "nombre",
+            "clave",
+            "activo",
+            "created_at",
+            "updated_at",
+            "deleted_at",
+        ]
+        read_only_fields = ["created_at", "updated_at", "deleted_at"]

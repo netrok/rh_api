@@ -1,27 +1,19 @@
-# Python / Django
+﻿# Python
 __pycache__/
 *.py[cod]
 *.egg-info/
-*.pot
-*.log
-*.sqlite3
-db.sqlite3
-local_settings.py
-media/
-staticfiles/
-
-# Entornos / IDE
 .venv/
-env/
 venv/
+
+# Django
+staticfiles/
+media/
+db.sqlite3
+
+# IDE
 .vscode/
 .idea/
-.DS_Store
 
-# Tests / cobertura
-.coverage
-htmlcov/
-
-# Variables de entorno
+# Env/Secrets
 .env
 .env.*

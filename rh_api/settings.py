@@ -7,24 +7,18 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-# ──
-# Helpers de entorno
-# ─
+# ── Helpers de entorno ─────────────────────────────────────────────────────────
 def env_bool(name: str, default: bool = False) -> bool:
     return str(os.getenv(name, str(default))).lower() in ("1", "true", "yes", "on")
 
 def env_list(name: str, default: str = "") -> list[str]:
     return [x.strip() for x in os.getenv(name, default).split(",") if x.strip()]
 
-# 
-# Paths / Env
-# 
+# ── Paths / Env ────────────────────────────────────────────────────────────────
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")  # Carga variables desde .env
 
-# 
-# Core / Seguridad básica
-# 
+# ── Core / Seguridad ──────────────────────────────────────────────────────────
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "DEV-ONLY-CHANGE-ME")
 DEBUG = env_bool("DJANGO_DEBUG", True)
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost")
@@ -34,9 +28,12 @@ CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", "")
 CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = [o for o in CORS_ALLOWED_ORIGINS if o.startswith(("http://", "https://"))]
 
-# 
-# Apps
-# 
+# En desarrollo, si no definiste orígenes, permite todos (evita dolores con Vite/React)
+CORS_ALLOW_ALL_ORIGINS = False
+if DEBUG and not CORS_ALLOWED_ORIGINS:
+    CORS_ALLOW_ALL_ORIGINS = True
+
+# ── Apps ──────────────────────────────────────────────────────────────────────
 INSTALLED_APPS = [
     # Django
     "django.contrib.admin",
@@ -58,9 +55,7 @@ INSTALLED_APPS = [
     "empleados",
 ]
 
-# 
-# Middleware
-# 
+# ── Middleware ────────────────────────────────────────────────────────────────
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",  # lo más arriba posible y antes de CommonMiddleware
     "django.middleware.security.SecurityMiddleware",
@@ -73,9 +68,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-# 
-# URLs / Templates / WSGI
-# 
+# ── URLs / Templates / WSGI ───────────────────────────────────────────────────
 ROOT_URLCONF = "rh_api.urls"
 
 TEMPLATES = [
@@ -96,9 +89,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "rh_api.wsgi.application"
 
-# 
-# Base de datos: PostgreSQL
-# 
+# ── Base de datos: PostgreSQL ─────────────────────────────────────────────────
 DB_OPTIONS: dict = {}
 _db_search_path = os.getenv("DB_SEARCH_PATH")
 if _db_search_path:
@@ -121,9 +112,7 @@ DATABASES = {
     }
 }
 
-# 
-# Password validators
-# 
+# ── Password validators ───────────────────────────────────────────────────────
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
@@ -131,30 +120,22 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-# 
-# i18n / TZ
-# 
+# ── i18n / TZ ─────────────────────────────────────────────────────────────────
 LANGUAGE_CODE = "es-mx"
 TIME_ZONE = "America/Mexico_City"
 USE_I18N = True
 USE_TZ = True
 
-# 
-# Static / Media
-# 
+# ── Static / Media ────────────────────────────────────────────────────────────
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-# 
-# Auto PK
-# 
+# ── Auto PK ───────────────────────────────────────────────────────────────────
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# 
-# DRF / OpenAPI / Filtros / Paginación / JWT
-# 
+# ── DRF / OpenAPI / Filtros / Paginación / JWT ───────────────────────────────
 REST_FRAMEWORK = {
     # En dev: AllowAny; en prod: IsAuthenticated
     "DEFAULT_PERMISSION_CLASSES": [
@@ -171,19 +152,19 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": int(os.getenv("API_PAGE_SIZE", "10")),
-    #  Acepta JSON, x-www-form-urlencoded y multipart (evita 415)
+    # Parsers globales (evita 415 en multipart)
     "DEFAULT_PARSER_CLASSES": (
         "rest_framework.parsers.JSONParser",
         "rest_framework.parsers.FormParser",
         "rest_framework.parsers.MultiPartParser",
     ),
-    #  Renderers: Browsable API solo en DEBUG
-    "DEFAULT_RENDERER_CLASSES": (
-        ("rest_framework.renderers.JSONRenderer",
-         "rest_framework.renderers.BrowsableAPIRenderer")
-        if DEBUG else
-        ("rest_framework.renderers.JSONRenderer",)
-    ),
+    # Renderers: Browsable API solo en DEBUG (arreglo: sin tuplas anidadas)
+    "DEFAULT_RENDERER_CLASSES": [
+        "rest_framework.renderers.JSONRenderer",
+        "rest_framework.renderers.BrowsableAPIRenderer",
+    ] if DEBUG else [
+        "rest_framework.renderers.JSONRenderer",
+    ],
 }
 
 SPECTACULAR_SETTINGS = {
@@ -208,9 +189,7 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
-# 
-# Seguridad (producción)
-# 
+# ── Seguridad (producción) ────────────────────────────────────────────────────
 if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
@@ -224,18 +203,13 @@ if not DEBUG:
     X_FRAME_OPTIONS = "DENY"
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
-# 
-# Logging
-# 
+# ── Logging ───────────────────────────────────────────────────────────────────
 LOG_LEVEL = "DEBUG" if DEBUG else "INFO"
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
-        "console_fmt": {
-            "format": "[{levelname}] {asctime} {name}: {message}",
-            "style": "{",
-        },
+        "console_fmt": {"format": "[{levelname}] {asctime} {name}: {message}", "style": "{"},
     },
     "handlers": {
         "console": {"class": "logging.StreamHandler", "formatter": "console_fmt"},
@@ -247,7 +221,5 @@ LOGGING = {
     },
 }
 
-# 
-# Opcionales cómodos
-# 
-APPEND_SLASH = True  # redirige /ruta a /ruta/
+# ── Opcionales cómodos ────────────────────────────────────────────────────────
+APPEND_SLASH = True
