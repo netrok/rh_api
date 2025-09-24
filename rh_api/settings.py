@@ -7,7 +7,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-# ── Helpers de entorno ─────────────────────────────────────────────────────────
+# ── Helpers ───────────────────────────────────────────────────────────────────
 def env_bool(name: str, default: bool = False) -> bool:
     return str(os.getenv(name, str(default))).lower() in ("1", "true", "yes", "on")
 
@@ -16,25 +16,40 @@ def env_list(name: str, default: str = "") -> list[str]:
 
 # ── Paths / Env ────────────────────────────────────────────────────────────────
 BASE_DIR = Path(__file__).resolve().parent.parent
-load_dotenv(BASE_DIR / ".env")  # Carga variables desde .env
+load_dotenv(BASE_DIR / ".env")
 
 # ── Core / Seguridad ──────────────────────────────────────────────────────────
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "DEV-ONLY-CHANGE-ME")
 DEBUG = env_bool("DJANGO_DEBUG", True)
-ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost")
+
+# En dev: permite todo (incluye IPs de la LAN) para evitar DisallowedHost.
+# En prod: usa DJANGO_ALLOWED_HOSTS del .env
+if DEBUG:
+    ALLOWED_HOSTS = ["*"]
+else:
+    ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost")
 
 # CORS / CSRF
+# Si llamas directo por IP desde el front, define esto en .env:
+# CORS_ALLOWED_ORIGINS=http://192.168.0.20:5173,http://localhost:5173
 CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", "")
 CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = [o for o in CORS_ALLOWED_ORIGINS if o.startswith(("http://", "https://"))]
 
-# En desarrollo, si no definiste orígenes, permite todos (evita dolores con Vite/React)
+# En dev, si no definiste orígenes, permite todos
 CORS_ALLOW_ALL_ORIGINS = False
 if DEBUG and not CORS_ALLOWED_ORIGINS:
     CORS_ALLOW_ALL_ORIGINS = True
 
 # ── Apps ──────────────────────────────────────────────────────────────────────
 INSTALLED_APPS = [
+    # Terceros primero para coherencia con el middleware de CORS
+    "corsheaders",
+    "rest_framework",
+    "drf_spectacular",
+    "rest_framework_simplejwt.token_blacklist",
+    "django_filters",
+    "simple_history",
     # Django
     "django.contrib.admin",
     "django.contrib.auth",
@@ -42,14 +57,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    # Terceros
-    "rest_framework",
-    "corsheaders",
-    "drf_spectacular",
-    "rest_framework_simplejwt.token_blacklist",
-    "django_filters",
-    "simple_history",
-    # Apps locales
+    # Locales
     "core",
     "catalogos",
     "empleados",
@@ -57,7 +65,7 @@ INSTALLED_APPS = [
 
 # ── Middleware ────────────────────────────────────────────────────────────────
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",  # lo más arriba posible y antes de CommonMiddleware
+    "corsheaders.middleware.CorsMiddleware",  # arriba y antes de CommonMiddleware
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -89,7 +97,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "rh_api.wsgi.application"
 
-# ── Base de datos: PostgreSQL ─────────────────────────────────────────────────
+# ── Base de datos ─────────────────────────────────────────────────────────────
 DB_OPTIONS: dict = {}
 _db_search_path = os.getenv("DB_SEARCH_PATH")
 if _db_search_path:
@@ -135,9 +143,8 @@ MEDIA_ROOT = BASE_DIR / "media"
 # ── Auto PK ───────────────────────────────────────────────────────────────────
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# ── DRF / OpenAPI / Filtros / Paginación / JWT ───────────────────────────────
+# ── DRF / OpenAPI / JWT ───────────────────────────────────────────────────────
 REST_FRAMEWORK = {
-    # En dev: AllowAny; en prod: IsAuthenticated
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.AllowAny" if DEBUG else "rest_framework.permissions.IsAuthenticated"
     ],
@@ -152,13 +159,11 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": int(os.getenv("API_PAGE_SIZE", "10")),
-    # Parsers globales (evita 415 en multipart)
     "DEFAULT_PARSER_CLASSES": (
         "rest_framework.parsers.JSONParser",
         "rest_framework.parsers.FormParser",
         "rest_framework.parsers.MultiPartParser",
     ),
-    # Renderers: Browsable API solo en DEBUG (arreglo: sin tuplas anidadas)
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",
         "rest_framework.renderers.BrowsableAPIRenderer",
@@ -221,5 +226,5 @@ LOGGING = {
     },
 }
 
-# ── Opcionales cómodos ────────────────────────────────────────────────────────
+# ── Opcionales ────────────────────────────────────────────────────────────────
 APPEND_SLASH = True

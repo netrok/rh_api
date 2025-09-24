@@ -4,6 +4,7 @@ from __future__ import annotations
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.http import JsonResponse
 from django.urls import include, path
 from django.views.generic import RedirectView
 
@@ -31,6 +32,10 @@ from catalogos.views import (
 )
 from empleados.views import EmpleadoViewSet
 
+# ---------- Health ----------
+def health(_request):
+    return JsonResponse({"ok": True})
+
 # ---------- Router /api/v1 ----------
 router = DefaultRouter()
 router.trailing_slash = "/?"  # diagonal final opcional
@@ -52,9 +57,12 @@ urlpatterns = [
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
     path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
 
-    # Core
+    # Core utilidades
+    path("api/health", health, name="health"),
     path("api/ping/", ping, name="ping"),
     path("api/me/", me, name="me"),
+    # Alias compatible con tu FRONT (.env: VITE_JWT_USERINFO=/auth/me/)
+    path("api/auth/me/", me, name="me_alias"),
 
     # API v1 (router)
     path("api/v1/", include(router.urls)),
